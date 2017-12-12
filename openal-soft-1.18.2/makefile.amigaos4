@@ -25,20 +25,26 @@ SRCS = OpenAL32/alAuxEffectSlot.c \
        OpenAL32/alThunk.c \
        OpenAL32/sample_cvt.c \
        Alc/ALc.c \
-       Alc/ALu.c \
        Alc/alcConfig.c \
+       Alc/alcRing.c \
+       Alc/ALu.c \
+       Alc/ambdec.c \
+       Alc/bformatdec.c \
        Alc/bs2b.c \
+       Alc/bsinc.c \
+       Alc/converter.c \
        Alc/helpers.c \
        Alc/hrtf.c \
+       Alc/mastering.c \
        Alc/mixer.c \
        Alc/mixer_c.c \
+       Alc/nfcfilter.c \
        Alc/panning.c \
-       Alc/backends/ahi.c \
+       Alc/uhjfilter.c \
        Alc/backends/base.c \
        Alc/backends/loopback.c \
        Alc/backends/null.c \
        Alc/backends/wave.c \
-       Alc/effects/autowah.c \
        Alc/effects/chorus.c \
        Alc/effects/compressor.c \
        Alc/effects/dedicated.c \
@@ -49,13 +55,10 @@ SRCS = OpenAL32/alAuxEffectSlot.c \
        Alc/effects/modulator.c \
        Alc/effects/null.c \
        Alc/effects/reverb.c \
-       Alc/midi/base.c \
-       Alc/midi/dummy.c \
-       Alc/midi/fluidsynth.c \
-       Alc/midi/sf2load.c \
-       Alc/midi/soft.c \
-       common/threads.c \
+       common/almalloc.c \
+       common/atomic.c \
        common/rwlock.c \
+       common/threads.c \
        common/uintmap.c
 
 OBJS = $(addprefix obj/,$(SRCS:.c=.o))
@@ -71,16 +74,12 @@ obj/Alc/%.o: Alc/%.c
 	@mkdir -p obj/Alc
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-obj/Alc/backends/%.o: Alc/%.c
+obj/Alc/backends/%.o: Alc/backends/%.c
 	@mkdir -p obj/Alc/backends
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-obj/Alc/effects/%.o: Alc/%.c
+obj/Alc/effects/%.o: Alc/effects/%.c
 	@mkdir -p obj/Alc/effects
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-obj/Alc/midi/%.o: Alc/%.c
-	@mkdir -p obj/Alc/midi
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 obj/common/%.o: common/%.c
