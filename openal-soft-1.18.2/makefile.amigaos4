@@ -7,9 +7,9 @@ OPTIMIZE = -O2
 DEBUG    = -g
 WARNINGS = -Wall -Wwrite-strings -Werror
 DEFINES  = -DAL_ALEXT_PROTOTYPES
-INCPATHS = -I. -I./include -I./Alc
+INCPATHS = -I. -I./include -I./OpenAL32/Include -I./Alc -I./common
 
-CFLAGS   = -std=gnu99 $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS) $(DEFINES)
+CFLAGS   = -std=gnu11 $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS) $(DEFINES)
 PICFLAGS = -fPIC -DPIC
 
 SRCS = OpenAL32/alAuxEffectSlot.c \
@@ -18,11 +18,8 @@ SRCS = OpenAL32/alAuxEffectSlot.c \
        OpenAL32/alError.c \
        OpenAL32/alExtension.c \
        OpenAL32/alFilter.c \
-       OpenAL32/alFontsound.c \
        OpenAL32/alListener.c \
-       OpenAL32/alMidi.c \
-       OpenAL32/alPreset.c \
-       OpenAL32/alSoundfont.c \
+       OpenAL32/alSource.c \
        OpenAL32/alSource.c \
        OpenAL32/alState.c \
        OpenAL32/alThunk.c \
