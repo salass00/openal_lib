@@ -1,0 +1,29 @@
+HOST   = ppc-amigaos
+CC     = $(HOST)-gcc
+STRIP  = $(HOST)-strip
+
+OPTIMIZE = -O2
+DEBUG    = -g
+WARNINGS = -Wall -Wwrite-strings -Werror
+INCPATHS = -I../include -I../common -I/SDK/local/common/include/SDL
+
+CFLAGS     = -std=gnu11 $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS)
+LDFLAGS    = -static
+LIBS       = -lSDL -lpthread
+STRIPFLAGS = -R.comment --strip-unneeded-rel-relocs
+
+.PHONY: all
+all: alloopback
+
+obj/%.o: %.c
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+alloopback: obj/alloopback.o ../libopenal.a
+	$(CC) $(LDFLAGS) -o $@.debug $^ $(LIBS)
+	$(STRIP) $(STRIPFLAGS) -o $@ $@.debug
+
+.PHONY: clean
+clean:
+	rm -rf alloopback *.debug obj
+

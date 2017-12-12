@@ -65,7 +65,7 @@ SRCS = OpenAL32/alAuxEffectSlot.c \
 OBJS = $(addprefix obj/,$(SRCS:.c=.o))
 
 .PHONY: all
-all: libopenal.a
+all: libopenal.a examples
 
 obj/OpenAL32/%.o: OpenAL32/%.c
 	@mkdir -p obj/OpenAL32
@@ -91,7 +91,12 @@ libopenal.a: $(OBJS)
 	$(AR) -crv $@ $^
 	$(RANLIB) $@
 
+.PHONY: examples
+examples:
+	$(MAKE) -C examples -f makefile.amigaos4
+
 .PHONY: clean
 clean:
+	$(MAKE) -C examples -f makefile.amigaos4 clean
 	rm -rf libopenal.a obj
 
