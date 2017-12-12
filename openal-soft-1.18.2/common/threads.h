@@ -117,7 +117,11 @@ inline int altss_set(altss_t tss_id, void *val)
 #include <stdint.h>
 #include <errno.h>
 #include <pthread.h>
+
+#ifdef __amigaos4__
 #include <unistd.h>
+#include <proto/exec.h>
+#endif
 
 
 typedef pthread_t althrd_t;
@@ -146,7 +150,14 @@ inline void althrd_exit(int res)
 
 inline void althrd_yield(void)
 {
+#ifdef __amigaos4__
+	struct Task *me = IExec->FindTask(NULL);
+
+	/* Calling SetTaskPri() should trigger a reschedule */
+	IExec->SetTaskPri(me, me->tc_Node.ln_Pri);
+#else
     sched_yield();
+#endif
 }
 
 inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
