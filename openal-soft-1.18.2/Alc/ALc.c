@@ -57,6 +57,9 @@ struct BackendInfo {
 };
 
 static struct BackendInfo BackendList[] = {
+#ifdef HAVE_AHI
+    { "ahi", ALCahiBackendFactory_getFactory },
+#endif
 #ifdef HAVE_JACK
     { "jack", ALCjackBackendFactory_getFactory },
 #endif

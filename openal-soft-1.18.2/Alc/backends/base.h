@@ -135,6 +135,7 @@ static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
 }
 
 
+ALCbackendFactory *ALCahiBackendFactory_getFactory(void);
 ALCbackendFactory *ALCpulseBackendFactory_getFactory(void);
 ALCbackendFactory *ALCalsaBackendFactory_getFactory(void);
 ALCbackendFactory *ALCcoreAudioBackendFactory_getFactory(void);
