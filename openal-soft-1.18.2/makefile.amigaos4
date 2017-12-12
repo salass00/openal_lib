@@ -2,6 +2,7 @@ HOST   = ppc-amigaos
 CC     = $(HOST)-gcc
 AR     = $(HOST)-ar
 RANLIB = $(HOST)-ranlib
+STRIP  = $(HOST)-strip
 
 AMIGADATE = $(shell date +"%-d.%-m.%Y")
 
@@ -13,6 +14,9 @@ INCPATHS = -I. -I./include -I./OpenAL32/Include -I./Alc -I./common
 
 CFLAGS   = -std=gnu11 $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS) $(DEFINES)
 PICFLAGS = -fPIC -DPIC
+
+STATIC_LIB := libopenal.a
+SHARED_LIB := libopenal.so
 
 SRCS = Alc/ALc.c \
        Alc/alcConfig.c \
@@ -66,8 +70,10 @@ SRCS = Alc/ALc.c \
 
 OBJS = $(addprefix obj/,$(SRCS:.c=.o))
 
+SO_OBJS = $(addprefix so-obj/,$(SRCS:.c=.o))
+
 .PHONY: all
-all: libopenal.a examples
+all: $(STATIC_LIB) $(SHARED_LIB) examples
 
 obj/Alc/%.o: Alc/%.c
 	@mkdir -p obj/Alc
@@ -89,9 +95,33 @@ obj/OpenAL32/%.o: OpenAL32/%.c
 	@mkdir -p obj/OpenAL32
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-libopenal.a: $(OBJS)
+$(STATIC_LIB): $(OBJS)
 	$(AR) -crv $@ $^
 	$(RANLIB) $@
+
+so-obj/Alc/%.o: Alc/%.c
+	@mkdir -p so-obj/Alc
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/Alc/backends/%.o: Alc/backends/%.c
+	@mkdir -p so-obj/Alc/backends
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/Alc/effects/%.o: Alc/effects/%.c
+	@mkdir -p so-obj/Alc/effects
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/common/%.o: common/%.c
+	@mkdir -p so-obj/common
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/OpenAL32/%.o: OpenAL32/%.c
+	@mkdir -p so-obj/OpenAL32
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+$(SHARED_LIB): $(SO_OBJS)
+	$(CC) -shared -Wl,--soname=$@ -o $@.debug $^ -lpthread
+	$(STRIP) -R.comment -o $@ $@.debug
 
 .PHONY: examples
 examples:
@@ -100,5 +130,5 @@ examples:
 .PHONY: clean
 clean:
 	$(MAKE) -C examples -f makefile.amigaos4 clean
-	rm -rf libopenal.a obj
+	rm -rf $(STATIC_LIB) $(SHARED_LIB) obj so-obj
 

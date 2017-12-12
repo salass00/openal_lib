@@ -1,8 +1,11 @@
 # Ignore object files
 openal-soft-1.18.2/obj
+openal-soft-1.18.2/so-obj
 openal-soft-1.18.2/examples/obj
 # Ignore generated library files
 libopenal.a
+libopenal.so
+libopenal.so.debug
 # Ignore generated executables
-openal-soft-1.18.2/examples/alloopback
-openal-soft-1.18.2/examples/alloopback.debug
+alloopback
+alloopback.debug
