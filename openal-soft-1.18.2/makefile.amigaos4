@@ -41,6 +41,7 @@ SRCS = OpenAL32/alAuxEffectSlot.c \
        Alc/nfcfilter.c \
        Alc/panning.c \
        Alc/uhjfilter.c \
+       Alc/backends/ahi.c \
        Alc/backends/base.c \
        Alc/backends/loopback.c \
        Alc/backends/null.c \
