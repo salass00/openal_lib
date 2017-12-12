@@ -99,7 +99,9 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #ifndef _WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef __amigaos4__
 #include <sys/mman.h>
+#endif
 #include <fcntl.h>
 #include <unistd.h>
 #elif defined(_WIN32_IE)
@@ -947,6 +949,59 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
 }
 
 
+#ifdef __amigaos4__
+
+struct FileMapping MapFileToMem(const char *fname)
+{
+	struct FileMapping ret = { -1, NULL, 0 };
+	struct stat sbuf;
+	void *ptr;
+	int fd;
+
+	fd = open(fname, O_RDONLY, 0);
+	if(fd == -1)
+	{
+		ERR("Failed to open %s: (%d) %s\n", fname, errno, strerror(errno));
+        return ret;
+	}
+	if(fstat(fd, &sbuf) == -1)
+	{
+		ERR("Failed to stat %s: (%d) %s\n", fname, errno, strerror(errno));
+        close(fd);
+        return ret;
+	}
+
+	ptr = malloc(sbuf.st_size);
+	if (ptr == NULL)
+	{
+		ERR("Failed to malloc %lu bytes\n", sbuf.st_size);
+		close(fd);
+		return ret;
+	}
+
+	if (read(fd, ptr, sbuf.st_size) != sbuf.st_size)
+	{
+		ERR("Failed to read %s: (%d) %s\n", fname, errno, strerror(errno));
+		free(ptr);
+		close(fd);
+		return ret;
+	}
+
+	ret.fd = fd;
+	ret.ptr = ptr;
+	ret.len = sbuf.st_size;
+
+	return ret;
+}
+
+void UnmapFileMem(const struct FileMapping *mapping)
+{
+    free(mapping->ptr);
+    close(mapping->fd);
+}
+
+#else
+
 struct FileMapping MapFileToMem(const char *fname)
 {
     struct FileMapping ret = { -1, NULL, 0 };
@@ -986,6 +1041,8 @@ void UnmapFileMem(const struct FileMapping *mapping)
     munmap(mapping->ptr, mapping->len);
     close(mapping->fd);
 }
+
+#endif
 
 #endif
 
