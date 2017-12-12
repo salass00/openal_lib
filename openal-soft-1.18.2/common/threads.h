@@ -117,6 +117,7 @@ inline int altss_set(altss_t tss_id, void *val)
 #include <stdint.h>
 #include <errno.h>
 #include <pthread.h>
+#include <unistd.h>
 
 
 typedef pthread_t althrd_t;
@@ -150,6 +151,10 @@ inline void althrd_yield(void)
 
 inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
 {
+#ifdef __amigaos4__
+	usleep((ts->tv_sec * 1000000UL) + (ts->tv_nsec / 1000UL));
+	return 0;
+#else
     int ret = nanosleep(ts, rem);
     if(ret != 0)
     {
@@ -157,6 +162,7 @@ inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
         errno = 0;
     }
     return ret;
+#endif
 }
 
 
@@ -205,7 +211,6 @@ inline void alcall_once(alonce_flag *once, void (*callback)(void))
 }
 
 #endif
-
 
 int althrd_create(althrd_t *thr, althrd_start_t func, void *arg);
 int althrd_detach(althrd_t thr);
