@@ -1,0 +1,100 @@
+HOST   = ppc-amigaos
+CC     = $(HOST)-gcc
+AR     = $(HOST)-ar
+RANLIB = $(HOST)-ranlib
+
+OPTIMIZE = -O2
+DEBUG    = -g
+WARNINGS = -Wall -Wwrite-strings -Werror
+DEFINES  = -DAL_ALEXT_PROTOTYPES
+INCPATHS = -I. -I./include -I./Alc
+
+CFLAGS   = -std=gnu99 $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS) $(DEFINES)
+PICFLAGS = -fPIC -DPIC
+
+SRCS = OpenAL32/alAuxEffectSlot.c \
+       OpenAL32/alBuffer.c \
+       OpenAL32/alEffect.c \
+       OpenAL32/alError.c \
+       OpenAL32/alExtension.c \
+       OpenAL32/alFilter.c \
+       OpenAL32/alFontsound.c \
+       OpenAL32/alListener.c \
+       OpenAL32/alMidi.c \
+       OpenAL32/alPreset.c \
+       OpenAL32/alSoundfont.c \
+       OpenAL32/alSource.c \
+       OpenAL32/alState.c \
+       OpenAL32/alThunk.c \
+       OpenAL32/sample_cvt.c \
+       Alc/ALc.c \
+       Alc/ALu.c \
+       Alc/alcConfig.c \
+       Alc/bs2b.c \
+       Alc/helpers.c \
+       Alc/hrtf.c \
+       Alc/mixer.c \
+       Alc/mixer_c.c \
+       Alc/panning.c \
+       Alc/backends/ahi.c \
+       Alc/backends/base.c \
+       Alc/backends/loopback.c \
+       Alc/backends/null.c \
+       Alc/backends/wave.c \
+       Alc/effects/autowah.c \
+       Alc/effects/chorus.c \
+       Alc/effects/compressor.c \
+       Alc/effects/dedicated.c \
+       Alc/effects/distortion.c \
+       Alc/effects/echo.c \
+       Alc/effects/equalizer.c \
+       Alc/effects/flanger.c \
+       Alc/effects/modulator.c \
+       Alc/effects/null.c \
+       Alc/effects/reverb.c \
+       Alc/midi/base.c \
+       Alc/midi/dummy.c \
+       Alc/midi/fluidsynth.c \
+       Alc/midi/sf2load.c \
+       Alc/midi/soft.c \
+       common/threads.c \
+       common/rwlock.c \
+       common/uintmap.c
+
+OBJS = $(addprefix obj/,$(SRCS:.c=.o))
+
+.PHONY: all
+all: libopenal.a
+
+obj/OpenAL32/%.o: OpenAL32/%.c
+	@mkdir -p obj/OpenAL32
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/Alc/%.o: Alc/%.c
+	@mkdir -p obj/Alc
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/Alc/backends/%.o: Alc/%.c
+	@mkdir -p obj/Alc/backends
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/Alc/effects/%.o: Alc/%.c
+	@mkdir -p obj/Alc/effects
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/Alc/midi/%.o: Alc/%.c
+	@mkdir -p obj/Alc/midi
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/common/%.o: common/%.c
+	@mkdir -p obj/common
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+libopenal.a: $(OBJS)
+	$(AR) -crv $@ $^
+	$(RANLIB) $@
+
+.PHONY: clean
+clean:
+	rm -rf libopenal.a obj
+
