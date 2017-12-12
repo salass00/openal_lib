@@ -1,0 +1,4 @@
+# Ignore object files
+openal-soft-1.18.2/obj
+# Ignore generated library files
+libopenal.a
