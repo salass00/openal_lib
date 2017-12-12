@@ -3,28 +3,18 @@ CC     = $(HOST)-gcc
 AR     = $(HOST)-ar
 RANLIB = $(HOST)-ranlib
 
+AMIGADATE = $(shell date +"%-d.%-m.%Y")
+
 OPTIMIZE = -O2
 DEBUG    = -g
 WARNINGS = -Wall -Wwrite-strings -Werror
-DEFINES  = -DAL_ALEXT_PROTOTYPES
+DEFINES  = -DAL_ALEXT_PROTOTYPES -D__AMIGADATE__=\"$(AMIGADATE)\"
 INCPATHS = -I. -I./include -I./OpenAL32/Include -I./Alc -I./common
 
 CFLAGS   = -std=gnu11 $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS) $(DEFINES)
 PICFLAGS = -fPIC -DPIC
 
-SRCS = OpenAL32/alAuxEffectSlot.c \
-       OpenAL32/alBuffer.c \
-       OpenAL32/alEffect.c \
-       OpenAL32/alError.c \
-       OpenAL32/alExtension.c \
-       OpenAL32/alFilter.c \
-       OpenAL32/alListener.c \
-       OpenAL32/alSource.c \
-       OpenAL32/alSource.c \
-       OpenAL32/alState.c \
-       OpenAL32/alThunk.c \
-       OpenAL32/sample_cvt.c \
-       Alc/ALc.c \
+SRCS = Alc/ALc.c \
        Alc/alcConfig.c \
        Alc/alcRing.c \
        Alc/ALu.c \
@@ -60,16 +50,24 @@ SRCS = OpenAL32/alAuxEffectSlot.c \
        common/atomic.c \
        common/rwlock.c \
        common/threads.c \
-       common/uintmap.c
+       common/uintmap.c \
+       OpenAL32/alAuxEffectSlot.c \
+       OpenAL32/alBuffer.c \
+       OpenAL32/alEffect.c \
+       OpenAL32/alError.c \
+       OpenAL32/alExtension.c \
+       OpenAL32/alFilter.c \
+       OpenAL32/alListener.c \
+       OpenAL32/alSource.c \
+       OpenAL32/alSource.c \
+       OpenAL32/alState.c \
+       OpenAL32/alThunk.c \
+       OpenAL32/sample_cvt.c
 
 OBJS = $(addprefix obj/,$(SRCS:.c=.o))
 
 .PHONY: all
 all: libopenal.a examples
-
-obj/OpenAL32/%.o: OpenAL32/%.c
-	@mkdir -p obj/OpenAL32
-	$(CC) $(CFLAGS) -c -o $@ $<
 
 obj/Alc/%.o: Alc/%.c
 	@mkdir -p obj/Alc
@@ -85,6 +83,10 @@ obj/Alc/effects/%.o: Alc/effects/%.c
 
 obj/common/%.o: common/%.c
 	@mkdir -p obj/common
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/OpenAL32/%.o: OpenAL32/%.c
+	@mkdir -p obj/OpenAL32
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 libopenal.a: $(OBJS)

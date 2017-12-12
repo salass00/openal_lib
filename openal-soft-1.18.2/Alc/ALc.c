@@ -18,6 +18,11 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
+#if defined(__amigaos4__) && defined(PIC)
+/* Extended version string for the shared object */
+const char extversion[] = "\0$EXTVER: openal-soft 1.18.2 (" __AMIGADATE__ ") AmigaOS port by salass00";
+#endif
+
 #include "config.h"
 
 #include "version.h"
