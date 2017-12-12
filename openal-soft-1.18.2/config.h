@@ -135,7 +135,7 @@
 /* #undef HAVE_WINDOWS_H */
 
 /* Define if we have dlfcn.h */
-#define HAVE_DLFCN_H 1
+/* #undef HAVE_DLFCN_H */
 
 /* Define if we have pthread_np.h */
 /* #undef HAVE_PTHREAD_NP_H */
