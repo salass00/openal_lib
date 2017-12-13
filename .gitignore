@@ -9,3 +9,5 @@ libopenal.so.debug
 # Ignore generated executables
 alloopback
 alloopback.debug
+altonegen
+altonegen.debug

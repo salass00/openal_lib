@@ -5,21 +5,34 @@ STRIP  = $(HOST)-strip
 OPTIMIZE = -O2
 DEBUG    = -g
 WARNINGS = -Wall -Wwrite-strings -Werror
-INCPATHS = -I../include -I../common -I/SDK/local/common/include/SDL
+INCPATHS = -I../include -I../common
 
 CFLAGS     = -std=gnu11 $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS)
 LDFLAGS    = -static
-LIBS       = -lSDL -lpthread
+LIBS       = -lpthread
 STRIPFLAGS = -R.comment --strip-unneeded-rel-relocs
 
+SDL_CFLAGS = -I/SDK/local/common/include/SDL
+SDL_LIBS   = -lSDL
+
 .PHONY: all
-all: alloopback
+all: alloopback altonegen
 
 obj/%.o: %.c
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+obj/common/%.o: common/%.c
+	@mkdir -p obj/common
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/alloopback.o: CFLAGS += $(SDL_CFLAGS)
+
 alloopback: obj/alloopback.o ../libopenal.a
+	$(CC) $(LDFLAGS) -o $@.debug $^ $(SDL_LIBS) $(LIBS)
+	$(STRIP) $(STRIPFLAGS) -o $@ $@.debug
+
+altonegen: obj/altonegen.o obj/common/alhelpers.o ../libopenal.a
 	$(CC) $(LDFLAGS) -o $@.debug $^ $(LIBS)
 	$(STRIP) $(STRIPFLAGS) -o $@ $@.debug
 
