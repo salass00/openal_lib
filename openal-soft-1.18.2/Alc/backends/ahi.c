@@ -29,6 +29,10 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 
+#define USE_PTHREAD 0
+
+#if !USE_PTHREAD
+
 static uint32 signal_pid_func(const struct Hook *hook, uint32 pid, struct Process *proc)
 {
 	uint32 sigmask = (uint32)hook->h_Data;
@@ -61,6 +65,8 @@ static BOOL signal_pid(uint32 pid, uint32 sigmask)
 	return result;
 }
 
+#endif
+
 static const ALCchar ahi_device[] = "AHI Default";
 
 typedef struct ALCplaybackAHI {
@@ -73,10 +79,14 @@ typedef struct ALCplaybackAHI {
 	ALubyte           *mix_data[2];
 	uint32             data_size;
 
+#if USE_PTHREAD
+	volatile int       killNow;
+	althrd_t           thread;
+#else
 	uint32             proc_id;
+#endif
 } ALCplaybackAHI;
 
-static int ALCplaybackAHI_mixerProc(void);
 static void ALCplaybackAHI_Construct(ALCplaybackAHI *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCplaybackAHI, ALCbackend, void, Destruct)
 static ALCenum ALCplaybackAHI_open(ALCplaybackAHI *self, const ALCchar *name);
@@ -92,15 +102,28 @@ static DECLARE_FORWARD(ALCplaybackAHI, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCplaybackAHI)
 DEFINE_ALCBACKEND_VTABLE(ALCplaybackAHI);
 
+#if USE_PTHREAD
+static int ALCplaybackAHI_mixerProc(void *ptr)
+#else
 static int ALCplaybackAHI_mixerProc(void)
+#endif
 {
 	struct Process    *me       = (struct Process *)IExec->FindTask(NULL);
-	ALCplaybackAHI    *self     = me->pr_Task.tc_UserData;
+#if USE_PTHREAD
+	ALCplaybackAHI    *self     = (ALCplaybackAHI *)ptr;
+#else
+	ALCplaybackAHI    *self     = (ALCplaybackAHI *)me->pr_Task.tc_UserData;
+#endif
 	ALCdevice         *device   = STATIC_CAST(ALCbackend, self)->mDevice;
 	int                db;
 	uint32             data_size, frame_size;
 	void              *buffer;
 	struct AHIRequest *ahir, *link;
+
+#if USE_PTHREAD
+	SetRTPriority();
+    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+#endif
 
 	/* Setup AHI port */
 	self->ahi_port->mp_SigTask = &me->pr_Task;
@@ -112,7 +135,11 @@ static int ALCplaybackAHI_mixerProc(void)
 	link = NULL;
 	db = 0;
 
+#if USE_PTHREAD
+	while (!self->killNow && device->Connected) {
+#else
 	while (IDOS->CheckSignal(SIGBREAKF_CTRL_C) == 0 && device->Connected) {
+#endif
 		data_size = self->data_size;
 
 		buffer = self->mix_data[db];
@@ -221,6 +248,10 @@ static ALCenum ALCplaybackAHI_open(ALCplaybackAHI *self, const ALCchar *name)
 		return ALC_INVALID_VALUE;
 	}
 
+#if USE_PTHREAD
+	self->killNow = 0;
+#endif
+
 	self->ahi_fmt = get_ahi_format(device);
 	if(self->ahi_fmt == -1)
 		return ALC_INVALID_VALUE;
@@ -303,10 +334,16 @@ static ALCboolean ALCplaybackAHI_start(ALCplaybackAHI *self)
 		TAG_END);
 	if(self->mix_data[0] != NULL && self->mix_data[1] != NULL)
 	{
+#if USE_PTHREAD
+		self->killNow = 0;
+
+		if(althrd_create(&self->thread, ALCplaybackAHI_mixerProc, self) == althrd_success)
+			return ALC_TRUE;
+#else
 		struct Process *proc;
 
 		proc = IDOS->CreateNewProcTags(
-			NP_Name,                   "OpenAL mixer process",
+			NP_Name,                   MIXER_THREAD_NAME,
 			NP_Entry,                  ALCplaybackAHI_mixerProc,
 			NP_Priority,               5,
 			NP_Child,                  TRUE,
@@ -329,6 +366,7 @@ static ALCboolean ALCplaybackAHI_start(ALCplaybackAHI *self)
 
 			return ALC_TRUE;
 		}
+#endif
 	}
 
 	IExec->FreeVec(self->mix_data[1]);
@@ -342,6 +380,15 @@ static ALCboolean ALCplaybackAHI_start(ALCplaybackAHI *self)
 
 static void ALCplaybackAHI_stop(ALCplaybackAHI *self)
 {
+#if USE_PTHREAD
+	int res;
+
+	if (self->killNow)
+		return;
+
+	self->killNow = 1;
+	althrd_join(self->thread, &res);
+#else
 	if (self->proc_id == 0)
 		return;
 
@@ -349,6 +396,7 @@ static void ALCplaybackAHI_stop(ALCplaybackAHI *self)
 		IExec->Wait(SIGF_CHILD);
 
 	self->proc_id = 0;
+#endif
 
 	IExec->FreeVec(self->mix_data[1]);
 	IExec->FreeVec(self->mix_data[0]);
