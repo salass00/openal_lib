@@ -26,6 +26,10 @@
  * output handling.
  */
 
+#ifdef __amigaos4__
+static const char __attribute__((used)) stack[]="\0$STACK:524288";
+#endif
+
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
