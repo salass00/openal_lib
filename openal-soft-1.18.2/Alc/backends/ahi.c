@@ -254,7 +254,7 @@ static ALCenum ALCplaybackAHI_open(ALCplaybackAHI *self, const ALCchar *name)
 		return ALC_OUT_OF_MEMORY;
 	}
 
-	alstr_copy_cstr(&device->DeviceName, name);
+	alstr_copy_cstr(&device->DeviceName, AHINAME);
 
 	return ALC_NO_ERROR;
 }
