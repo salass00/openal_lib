@@ -132,3 +132,8 @@ clean:
 	$(MAKE) -C examples -f makefile.amigaos4 clean
 	rm -rf $(STATIC_LIB) $(SHARED_LIB) obj so-obj
 
+.PHONY: install
+install:
+	cp -r include/* /SDK/local/newlib/include/
+	cp libopenal.a /SDK/local/newlib/lib/
+	cp libopenal.so /SDK/local/newlib/lib/

@@ -11,3 +11,7 @@ build-openal:
 clean:
 	$(MAKE) -C $(OPENALDIR) -f makefile.amigaos4 clean
 
+.PHONY: install
+install:
+	$(MAKE) -C $(OPENALDIR) -f makefile.amigaos4 install
+
