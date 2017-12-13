@@ -45,6 +45,10 @@
 #include <sys/sysctl.h>
 #endif
 
+#ifdef __amigaos4__
+#include <proto/dos.h>
+#endif
+
 #ifndef AL_NO_UID_DEFS
 #if defined(HAVE_GUIDDEF_H) || defined(HAVE_INITGUID_H)
 #define INITGUID
@@ -740,6 +744,21 @@ al_string GetProcPath(void)
     pathname = malloc(pathlen + 1);
     sysctl(mib, 4, (void*)pathname, &pathlen, NULL, 0);
     pathname[pathlen] = 0;
+#elif defined(__amigaos4__)
+	struct Process *me;
+	const char *progname;
+
+	pathlen = 1024;
+	pathname = malloc(pathlen);
+
+	IDOS->NameFromLock(IDOS->GetProgramDir(), pathname, pathlen);
+
+	me = (struct Process *)IExec->FindTask(NULL);
+
+	/* FIXME: This won't be correct for shell processes */
+	progname = me->pr_Task.tc_Node.ln_Name;
+
+	IDOS->AddPart(pathname, progname, pathlen);
 #else
     const char *fname;
     ssize_t len;
