@@ -745,20 +745,17 @@ al_string GetProcPath(void)
     sysctl(mib, 4, (void*)pathname, &pathlen, NULL, 0);
     pathname[pathlen] = 0;
 #elif defined(__amigaos4__)
-	struct Process *me;
-	const char *progname;
+	char progname[1024];
 
 	pathlen = 1024;
 	pathname = malloc(pathlen);
 
-	IDOS->NameFromLock(IDOS->GetProgramDir(), pathname, pathlen);
+	IDOS->DevNameFromLock(IDOS->GetProgramDir(), pathname, pathlen, DN_FULLPATH);
 
-	me = (struct Process *)IExec->FindTask(NULL);
+	if (!IDOS->GetCliProgramName(progname, sizeof(progname)))
+		strlcpy(progname, IExec->FindTask(NULL)->tc_Node.ln_Name, sizeof(progname));
 
-	/* FIXME: This won't be correct for shell processes */
-	progname = me->pr_Task.tc_Node.ln_Name;
-
-	IDOS->AddPart(pathname, progname, pathlen);
+	IDOS->AddPart(pathname, IDOS->FilePart(progname), pathlen);
 #else
     const char *fname;
     ssize_t len;
