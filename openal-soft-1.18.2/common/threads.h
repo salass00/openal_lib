@@ -129,7 +129,7 @@ struct amigaos_cond {
 };
 
 struct amigaos_once {
-	uint32 init;
+    uint32 init;
     uint32 run;
 };
 
@@ -202,12 +202,12 @@ inline int almtx_trylock(almtx_t *mtx)
 
 inline void *altss_get(altss_t tss_id)
 {
-	return amigaos_tls_get(tss_id);
+    return amigaos_tls_get(tss_id);
 }
 
 inline int altss_set(altss_t tss_id, void *val)
 {
-	return amigaos_tls_set(tss_id, val);
+    return amigaos_tls_set(tss_id, val);
 }
 
 

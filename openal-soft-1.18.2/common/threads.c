@@ -487,15 +487,15 @@ void alcall_once(alonce_flag *once, void (*callback)(void))
 #include <pthread.h>
 
 struct amigaos_tls_entry {
-	struct MinNode node;
+    struct MinNode node;
     uint32 pid;
     void *val;
 };
 
 struct amigaos_tls {
-	uint32 alloc;
+    uint32 alloc;
     altss_dtor_t callback;
-	struct SignalSemaphore sem;
+    struct SignalSemaphore sem;
     struct MinList list;
 };
 
@@ -510,7 +510,7 @@ static amigaos_tls_t amigaos_tls_table[MAX_TLS_ENTRIES];
 
 void althrd_setname(althrd_t thr, const char *name)
 {
-	/* No-op */
+    /* No-op */
 }
 
 typedef struct thread_cntr {
@@ -680,121 +680,121 @@ void alcnd_destroy(alcnd_t *cond)
 
 int altss_create(altss_t *tss_id, altss_dtor_t callback)
 {
-	amigaos_tls_t *tls;
-	uint32 i;
+    amigaos_tls_t *tls;
+    uint32 i;
 
-	for (i = 0; i < MAX_TLS_ENTRIES; i++)
-	{
-		tls = &amigaos_tls_table[i];
-		if (atomic_set(&tls->alloc, TRUE) == FALSE)
-		{
-			tls->callback = callback;
-			IExec->InitSemaphore(&tls->sem);
-			IExec->NewMinList(&tls->list);
+    for (i = 0; i < MAX_TLS_ENTRIES; i++)
+    {
+        tls = &amigaos_tls_table[i];
+        if (atomic_set(&tls->alloc, TRUE) == FALSE)
+        {
+            tls->callback = callback;
+            IExec->InitSemaphore(&tls->sem);
+            IExec->NewMinList(&tls->list);
 
-			*tss_id = i;
-			return althrd_success;
-		}
-	}
+            *tss_id = i;
+            return althrd_success;
+        }
+    }
 
-	return althrd_error;
+    return althrd_error;
 }
 
 void altss_delete(altss_t tss_id)
 {
-	amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
+    amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
 
-	if (tls->alloc)
-	{
-		struct MinNode *node;
-		amigaos_tls_entry_t *entry;
+    if (tls->alloc)
+    {
+        struct MinNode *node;
+        amigaos_tls_entry_t *entry;
 
-		IExec->ObtainSemaphore(&tls->sem);
-		while ((node = (struct MinNode *)IExec->RemHead((struct List *)&tls->list)) != NULL)
-		{
-			entry = (amigaos_tls_entry_t *)node;
+        IExec->ObtainSemaphore(&tls->sem);
+        while ((node = (struct MinNode *)IExec->RemHead((struct List *)&tls->list)) != NULL)
+        {
+            entry = (amigaos_tls_entry_t *)node;
 
-			if (entry->val && tls->callback)
-				tls->callback(entry->val);
+            if (entry->val && tls->callback)
+                tls->callback(entry->val);
 
-			free(entry);
-		}
-		IExec->ReleaseSemaphore(&tls->sem);
+            free(entry);
+        }
+        IExec->ReleaseSemaphore(&tls->sem);
 
-		tls->alloc = FALSE;
-	}
+        tls->alloc = FALSE;
+    }
 }
 
 void *amigaos_tls_get(altss_t tss_id)
 {
-	amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
+    amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
 
-	if (tls->alloc)
-	{
-		struct MinNode *node;
-		amigaos_tls_entry_t *entry;
-		uint32 our_pid;
+    if (tls->alloc)
+    {
+        struct MinNode *node;
+        amigaos_tls_entry_t *entry;
+        uint32 our_pid;
 
-		our_pid = IDOS->GetPID(NULL, GPID_PROCESS);
+        our_pid = IDOS->GetPID(NULL, GPID_PROCESS);
 
-		IExec->ObtainSemaphoreShared(&tls->sem);
-		for (node = tls->list.mlh_Head; node->mln_Succ != NULL; node = node->mln_Succ)
-		{
-			entry = (amigaos_tls_entry_t *)node;
+        IExec->ObtainSemaphoreShared(&tls->sem);
+        for (node = tls->list.mlh_Head; node->mln_Succ != NULL; node = node->mln_Succ)
+        {
+            entry = (amigaos_tls_entry_t *)node;
 
-			if (entry->pid == our_pid)
-			{
-				IExec->ReleaseSemaphore(&tls->sem);
-				return entry->val;
-			}
-		}
-		IExec->ReleaseSemaphore(&tls->sem);
-	}
+            if (entry->pid == our_pid)
+            {
+                IExec->ReleaseSemaphore(&tls->sem);
+                return entry->val;
+            }
+        }
+        IExec->ReleaseSemaphore(&tls->sem);
+    }
 
-	return NULL;
+    return NULL;
 }
 
 int amigaos_tls_set(altss_t tss_id, void *val)
 {
-	amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
+    amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
 
-	if (tls->alloc)
-	{
-		struct MinNode *node;
-		amigaos_tls_entry_t *entry;
-		uint32 our_pid;
+    if (tls->alloc)
+    {
+        struct MinNode *node;
+        amigaos_tls_entry_t *entry;
+        uint32 our_pid;
 
-		our_pid = IDOS->GetPID(NULL, GPID_PROCESS);
+        our_pid = IDOS->GetPID(NULL, GPID_PROCESS);
 
-		IExec->ObtainSemaphoreShared(&tls->sem);
-		for (node = tls->list.mlh_Head; node->mln_Succ != NULL; node = node->mln_Succ)
-		{
-			entry = (amigaos_tls_entry_t *)node;
+        IExec->ObtainSemaphoreShared(&tls->sem);
+        for (node = tls->list.mlh_Head; node->mln_Succ != NULL; node = node->mln_Succ)
+        {
+            entry = (amigaos_tls_entry_t *)node;
 
-			if (entry->pid == our_pid)
-			{
-				entry->val = val;
-				IExec->ReleaseSemaphore(&tls->sem);
-				return althrd_success;
-			}
-		}
-		IExec->ReleaseSemaphore(&tls->sem);
+            if (entry->pid == our_pid)
+            {
+                entry->val = val;
+                IExec->ReleaseSemaphore(&tls->sem);
+                return althrd_success;
+            }
+        }
+        IExec->ReleaseSemaphore(&tls->sem);
 
-		entry = malloc(sizeof(amigaos_tls_entry_t));
-		if (entry == NULL)
-			return althrd_nomem;
+        entry = malloc(sizeof(amigaos_tls_entry_t));
+        if (entry == NULL)
+            return althrd_nomem;
 
-		entry->pid = our_pid;
-		entry->val = val;
+        entry->pid = our_pid;
+        entry->val = val;
 
-		IExec->ObtainSemaphore(&tls->sem);
-		IExec->AddTail((struct List *)&tls->list, (struct Node *)&entry->node);
-		IExec->ReleaseSemaphore(&tls->sem);
+        IExec->ObtainSemaphore(&tls->sem);
+        IExec->AddTail((struct List *)&tls->list, (struct Node *)&entry->node);
+        IExec->ReleaseSemaphore(&tls->sem);
 
-		return althrd_success;
-	}
+        return althrd_success;
+    }
 
-	return althrd_error;
+    return althrd_error;
 }
 
 
