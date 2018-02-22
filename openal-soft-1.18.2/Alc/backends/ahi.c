@@ -305,22 +305,20 @@ static ALCboolean ALCplaybackAHI_start(ALCplaybackAHI *self)
 		struct Process *proc;
 
 		proc = IDOS->CreateNewProcTags(
-			NP_Name,                   MIXER_THREAD_NAME,
-			NP_Entry,                  ALCplaybackAHI_mixerProc,
-			NP_Priority,               5,
-			NP_Child,                  TRUE,
-			NP_UserData,               self,
-			NP_CurrentDir,             ZERO,
-			NP_Path,                   ZERO,
-			NP_CopyVars,               FALSE,
-			NP_Input,                  ZERO,
-			NP_Output,                 ZERO,
-			NP_Error,                  ZERO,
-			NP_CloseInput,             FALSE,
-			NP_CloseOutput,            FALSE,
-			NP_CloseError,             FALSE,
-			NP_NotifyOnDeathSigTask,   NULL,
-			NP_NotifyOnDeathSignalBit, SIGB_CHILD,
+			NP_Name,        MIXER_THREAD_NAME,
+			NP_Entry,       ALCplaybackAHI_mixerProc,
+			NP_Priority,    5,
+			NP_Child,       TRUE,
+			NP_UserData,    self,
+			NP_CurrentDir,  ZERO,
+			NP_Path,        ZERO,
+			NP_CopyVars,    FALSE,
+			NP_Input,       ZERO,
+			NP_Output,      ZERO,
+			NP_Error,       ZERO,
+			NP_CloseInput,  FALSE,
+			NP_CloseOutput, FALSE,
+			NP_CloseError,  FALSE,
 			TAG_END);
 		if (proc != NULL)
 		{
@@ -345,7 +343,7 @@ static void ALCplaybackAHI_stop(ALCplaybackAHI *self)
 		return;
 
 	while (signal_pid(self->proc_id, SIGBREAKF_CTRL_C))
-		IExec->Wait(SIGF_CHILD);
+		IDOS->Delay(1);
 
 	self->proc_id = 0;
 

@@ -8,3 +8,8 @@
 - Replaced almtx_*, alcnd_* and altss_* functions with code not using
   pthreads.
 
+- Changed ALCplaybackAHI_stop() to periodically check if the mixer process has
+  ended rather than relying on the death signal. This fixes uqm hanging on
+  exit when used with openal because ALCplaybackAHI_start() was called from
+  a different process.
+
