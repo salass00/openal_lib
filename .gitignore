@@ -11,3 +11,6 @@ alloopback
 alloopback.debug
 altonegen
 altonegen.debug
+# Ignore release archives
+*.7z
+*.lha
