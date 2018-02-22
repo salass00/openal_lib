@@ -112,16 +112,128 @@ inline int altss_set(altss_t tss_id, void *val)
     return althrd_success;
 }
 
+#elif defined(__amigaos4__)
+
+#include <proto/exec.h>
+#include <proto/dos.h>
+#include <unistd.h>
+#include <pthread.h>
+
+struct amigaos_cond_waiter {
+    struct MinNode node;
+    struct Task *task;
+};
+
+struct amigaos_cond {
+    struct MinList list;
+};
+
+struct amigaos_once {
+	uint32 init;
+    uint32 run;
+};
+
+typedef struct amigaos_cond_waiter amigaos_cond_waiter_t;
+typedef struct amigaos_cond amigaos_cond_t;
+typedef struct amigaos_once amigaos_once_t;
+
+typedef pthread_t althrd_t;
+typedef APTR almtx_t;
+typedef amigaos_cond_t alcnd_t;
+typedef uint32 altss_t;
+typedef amigaos_once_t alonce_flag;
+
+#define AL_ONCE_FLAG_INIT { TRUE, FALSE }
+
+extern void *amigaos_tls_get(altss_t tss_id);
+extern int amigaos_tls_set(altss_t tss_id, void *val);
+
+
+inline althrd_t althrd_current(void)
+{
+    return pthread_self();
+}
+
+inline int althrd_equal(althrd_t thr0, althrd_t thr1)
+{
+    return pthread_equal(thr0, thr1);
+}
+
+inline void althrd_exit(int res)
+{
+    pthread_exit((void*)(size_t)res);
+}
+
+inline void althrd_yield(void)
+{
+    struct Task *me = IExec->FindTask(NULL);
+
+    /* Calling SetTaskPri() should trigger a reschedule */
+    IExec->SetTaskPri(me, me->tc_Node.ln_Pri);
+}
+
+inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
+{
+    usleep((ts->tv_sec * 1000000UL) + (ts->tv_nsec / 1000UL));
+    return 0;
+}
+
+
+inline int almtx_lock(almtx_t *mtx)
+{
+    IExec->MutexObtain(*mtx);
+    return althrd_success;
+}
+
+inline int almtx_unlock(almtx_t *mtx)
+{
+    IExec->MutexRelease(*mtx);
+    return althrd_success;
+}
+
+inline int almtx_trylock(almtx_t *mtx)
+{
+    if (!IExec->MutexAttempt(*mtx))
+        return althrd_busy;
+
+    return althrd_success;
+}
+
+
+inline void *altss_get(altss_t tss_id)
+{
+	return amigaos_tls_get(tss_id);
+}
+
+inline int altss_set(altss_t tss_id, void *val)
+{
+	return amigaos_tls_set(tss_id, val);
+}
+
+
+inline uint32 atomic_set(uint32 *p, uint32 val)
+{
+    uint32 res;
+
+    IExec->Forbid();
+    res = *p;
+    *p  = val;
+    IExec->Permit();
+
+    return res;
+}
+
+inline void alcall_once(alonce_flag *once, void (*callback)(void))
+{
+    if (atomic_set(&once->run, TRUE) == FALSE)
+        callback();
+}
+
 #else
 
 #include <stdint.h>
 #include <errno.h>
 #include <pthread.h>
-
-#ifdef __amigaos4__
-#include <unistd.h>
-#include <proto/exec.h>
-#endif
 
 
 typedef pthread_t althrd_t;
@@ -150,22 +262,11 @@ inline void althrd_exit(int res)
 
 inline void althrd_yield(void)
 {
-#ifdef __amigaos4__
-	struct Task *me = IExec->FindTask(NULL);
-
-	/* Calling SetTaskPri() should trigger a reschedule */
-	IExec->SetTaskPri(me, me->tc_Node.ln_Pri);
-#else
     sched_yield();
-#endif
 }
 
 inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
 {
-#ifdef __amigaos4__
-	usleep((ts->tv_sec * 1000000UL) + (ts->tv_nsec / 1000UL));
-	return 0;
-#else
     int ret = nanosleep(ts, rem);
     if(ret != 0)
     {
@@ -173,7 +274,6 @@ inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
         errno = 0;
     }
     return ret;
-#endif
 }
 
 

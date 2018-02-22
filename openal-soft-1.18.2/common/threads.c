@@ -480,6 +480,342 @@ void alcall_once(alonce_flag *once, void (*callback)(void))
     InterlockedExchange(once, 2);
 }
 
+#elif defined(__amigaos4__)
+
+#include <proto/exec.h>
+#include <proto/dos.h>
+#include <pthread.h>
+
+struct amigaos_tls_entry {
+	struct MinNode node;
+    uint32 pid;
+    void *val;
+};
+
+struct amigaos_tls {
+	uint32 alloc;
+    altss_dtor_t callback;
+	struct SignalSemaphore sem;
+    struct MinList list;
+};
+
+typedef struct amigaos_tls_entry amigaos_tls_entry_t;
+typedef struct amigaos_tls amigaos_tls_t;
+
+#define MAX_TLS_ENTRIES 16
+
+
+static amigaos_tls_t amigaos_tls_table[MAX_TLS_ENTRIES];
+
+
+void althrd_setname(althrd_t thr, const char *name)
+{
+	/* No-op */
+}
+
+typedef struct thread_cntr {
+    althrd_start_t func;
+    void *arg;
+} thread_cntr;
+
+static void *althrd_starter(void *arg)
+{
+    thread_cntr cntr;
+    memcpy(&cntr, arg, sizeof(cntr));
+    free(arg);
+
+    return (void*)(size_t)((*cntr.func)(cntr.arg));
+}
+
+int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
+{
+    thread_cntr *cntr;
+    pthread_attr_t attr;
+    size_t stackmult = 1;
+    int err;
+
+    cntr = malloc(sizeof(*cntr));
+    if(!cntr) return althrd_nomem;
+
+    if(pthread_attr_init(&attr) != 0)
+    {
+        free(cntr);
+        return althrd_error;
+    }
+retry_stacksize:
+    if(pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE*stackmult) != 0)
+    {
+        pthread_attr_destroy(&attr);
+        free(cntr);
+        return althrd_error;
+    }
+
+    cntr->func = func;
+    cntr->arg = arg;
+    if((err=pthread_create(thr, &attr, althrd_starter, cntr)) == 0)
+    {
+        pthread_attr_destroy(&attr);
+        return althrd_success;
+    }
+
+    if(err == EINVAL)
+    {
+        /* If an invalid stack size, try increasing it (limit x4, 8MB). */
+        if(stackmult < 4)
+        {
+            stackmult *= 2;
+            goto retry_stacksize;
+        }
+        /* If still nothing, try defaults and hope they're good enough. */
+        if(pthread_create(thr, NULL, althrd_starter, cntr) == 0)
+        {
+            pthread_attr_destroy(&attr);
+            return althrd_success;
+        }
+    }
+    pthread_attr_destroy(&attr);
+    free(cntr);
+    return althrd_error;
+}
+
+int althrd_detach(althrd_t thr)
+{
+    if(pthread_detach(thr) != 0)
+        return althrd_error;
+    return althrd_success;
+}
+
+int althrd_join(althrd_t thr, int *res)
+{
+    void *code;
+
+    if(pthread_join(thr, &code) != 0)
+        return althrd_error;
+    if(res != NULL)
+        *res = (int)(size_t)code;
+    return althrd_success;
+}
+
+
+int almtx_init(almtx_t *mtx, int type)
+{
+    if (mtx == NULL)
+        return althrd_error;
+
+    type &= ~almtx_recursive;
+    if(type != almtx_plain)
+        return althrd_error;
+
+    *mtx = IExec->AllocSysObject(ASOT_MUTEX, NULL);
+    if (*mtx == NULL)
+        return althrd_error;
+
+    return althrd_success;
+}
+
+void almtx_destroy(almtx_t *mtx)
+{
+    IExec->FreeSysObject(ASOT_MUTEX, *mtx);
+    *mtx = NULL;
+}
+
+
+int alcnd_init(alcnd_t *cond)
+{
+    if (cond == NULL)
+        return althrd_error;
+
+    IExec->NewMinList(&cond->list);
+    return althrd_success;
+}
+
+int alcnd_signal(alcnd_t *cond)
+{
+    amigaos_cond_waiter_t *waiter;
+
+    IExec->Forbid();
+    if ((waiter = (amigaos_cond_waiter_t *)IExec->RemHead((struct List *)&cond->list)) != NULL)
+        IExec->Signal(waiter->task, SIGF_SINGLE);
+    IExec->Permit();
+
+    return althrd_success;
+}
+
+int alcnd_broadcast(alcnd_t *cond)
+{
+    amigaos_cond_waiter_t *waiter;
+
+    IExec->Forbid();
+    while ((waiter = (amigaos_cond_waiter_t *)IExec->RemHead((struct List *)&cond->list)) != NULL)
+        IExec->Signal(waiter->task, SIGF_SINGLE);
+    IExec->Permit();
+
+    return althrd_success;
+}
+
+int alcnd_wait(alcnd_t *cond, almtx_t *mtx)
+{
+    amigaos_cond_waiter_t waiter;
+
+    waiter.task = IExec->FindTask(NULL);
+
+    IExec->SetSignal(0, SIGF_CHILD);
+
+    IExec->Forbid();
+    IExec->AddTail((struct List *)&cond->list, (struct Node *)&waiter.node);
+    IExec->Permit();
+
+    almtx_unlock(mtx);
+    IExec->Wait(SIGF_CHILD);
+    almtx_lock(mtx);
+
+    return althrd_success;
+}
+
+void alcnd_destroy(alcnd_t *cond)
+{
+    memset(cond, 0, sizeof(*cond));
+}
+
+
+int altss_create(altss_t *tss_id, altss_dtor_t callback)
+{
+	amigaos_tls_t *tls;
+	uint32 i;
+
+	for (i = 0; i < MAX_TLS_ENTRIES; i++)
+	{
+		tls = &amigaos_tls_table[i];
+		if (atomic_set(&tls->alloc, TRUE) == FALSE)
+		{
+			tls->callback = callback;
+			IExec->InitSemaphore(&tls->sem);
+			IExec->NewMinList(&tls->list);
+
+			*tss_id = i;
+			return althrd_success;
+		}
+	}
+
+	return althrd_error;
+}
+
+void altss_delete(altss_t tss_id)
+{
+	amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
+
+	if (tls->alloc)
+	{
+		struct MinNode *node;
+		amigaos_tls_entry_t *entry;
+
+		IExec->ObtainSemaphore(&tls->sem);
+		while ((node = (struct MinNode *)IExec->RemHead((struct List *)&tls->list)) != NULL)
+		{
+			entry = (amigaos_tls_entry_t *)node;
+
+			if (entry->val && tls->callback)
+				tls->callback(entry->val);
+
+			free(entry);
+		}
+		IExec->ReleaseSemaphore(&tls->sem);
+
+		tls->alloc = FALSE;
+	}
+}
+
+void *amigaos_tls_get(altss_t tss_id)
+{
+	amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
+
+	if (tls->alloc)
+	{
+		struct MinNode *node;
+		amigaos_tls_entry_t *entry;
+		uint32 our_pid;
+
+		our_pid = IDOS->GetPID(NULL, GPID_PROCESS);
+
+		IExec->ObtainSemaphoreShared(&tls->sem);
+		for (node = tls->list.mlh_Head; node->mln_Succ != NULL; node = node->mln_Succ)
+		{
+			entry = (amigaos_tls_entry_t *)node;
+
+			if (entry->pid == our_pid)
+			{
+				IExec->ReleaseSemaphore(&tls->sem);
+				return entry->val;
+			}
+		}
+		IExec->ReleaseSemaphore(&tls->sem);
+	}
+
+	return NULL;
+}
+
+int amigaos_tls_set(altss_t tss_id, void *val)
+{
+	amigaos_tls_t *tls = &amigaos_tls_table[tss_id];
+
+	if (tls->alloc)
+	{
+		struct MinNode *node;
+		amigaos_tls_entry_t *entry;
+		uint32 our_pid;
+
+		our_pid = IDOS->GetPID(NULL, GPID_PROCESS);
+
+		IExec->ObtainSemaphoreShared(&tls->sem);
+		for (node = tls->list.mlh_Head; node->mln_Succ != NULL; node = node->mln_Succ)
+		{
+			entry = (amigaos_tls_entry_t *)node;
+
+			if (entry->pid == our_pid)
+			{
+				entry->val = val;
+				IExec->ReleaseSemaphore(&tls->sem);
+				return althrd_success;
+			}
+		}
+		IExec->ReleaseSemaphore(&tls->sem);
+
+		entry = malloc(sizeof(amigaos_tls_entry_t));
+		if (entry == NULL)
+			return althrd_nomem;
+
+		entry->pid = our_pid;
+		entry->val = val;
+
+		IExec->ObtainSemaphore(&tls->sem);
+		IExec->AddTail((struct List *)&tls->list, (struct Node *)&entry->node);
+		IExec->ReleaseSemaphore(&tls->sem);
+
+		return althrd_success;
+	}
+
+	return althrd_error;
+}
+
+
+int altimespec_get(struct timespec *ts, int base)
+{
+    if(base == AL_TIME_UTC)
+    {
+        int ret;
+        struct timeval tv;
+        ret = gettimeofday(&tv, NULL);
+        if(ret == 0)
+        {
+            ts->tv_sec = tv.tv_sec;
+            ts->tv_nsec = tv.tv_usec * 1000;
+            return base;
+        }
+    }
+
+    return 0;
+}
+
 #else
 
 #include <sys/time.h>
