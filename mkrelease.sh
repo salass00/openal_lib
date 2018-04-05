@@ -9,7 +9,7 @@ make -C $OPENALDIR -f makefile.amigaos4 clean
 make -C $OPENALDIR -f makefile.amigaos4
 
 DESTDIR='tmp'
-RELEASE=`date +"%Y%m%d"`
+RELEASE='r2'
 
 rm -rf ${DESTDIR}
 mkdir -p ${DESTDIR}/${OPENALDIR}/SDK/local/newlib/include/AL
@@ -27,10 +27,10 @@ cp -p ${OPENALDIR}/libopenal.a ${DESTDIR}/${OPENALDIR}/SDK/local/newlib/lib
 cp -p ${OPENALDIR}/libopenal.so ${DESTDIR}/${OPENALDIR}/SDK/local/newlib/lib
 cp -p ${OPENALDIR}/openal.pc ${DESTDIR}/${OPENALDIR}/SDK/local/newlib/lib/pkgconfig
 
-rm -f ${OPENALDIR}-${RELEASE}.7z
-7za u ${OPENALDIR}-${RELEASE}.7z ./${DESTDIR}/${OPENALDIR}
+rm -f ${OPENALDIR}${RELEASE}.7z
+7za u ${OPENALDIR}${RELEASE}.7z ./${DESTDIR}/${OPENALDIR}
 
 rm -rf ${DESTDIR}
 
-echo "${OPENALDIR}-${RELEASE}.7z created"
+echo "${OPENALDIR}${RELEASE}.7z created"
 

@@ -1,9 +1,9 @@
-20180222 (22.2.2018)
+1.18.2-20180222 (22.2.2018)
 
 - First released version
 
 
-2018xxxx (xx.xx.2018)
+1.18.2r2 (5.4.2018)
 
 - Replaced almtx_*, alcnd_* and altss_* functions with code not using
   pthreads.
