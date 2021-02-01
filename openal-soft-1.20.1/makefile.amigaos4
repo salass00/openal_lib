@@ -1,0 +1,172 @@
+HOST   = ppc-amigaos
+CC     = $(HOST)-gcc
+AR     = $(HOST)-ar
+RANLIB = $(HOST)-ranlib
+STRIP  = $(HOST)-strip
+
+AMIGADATE = $(shell date +"%-d.%-m.%Y")
+
+OPTIMIZE = -O2
+DEBUG    = -g
+WARNINGS = -Wall -Wwrite-strings -Werror -Wno-error=attributes
+DEFINES  = -DAL_ALEXT_PROTOTYPES -D__AMIGADATE__=\"$(AMIGADATE)\" -D_DEBUG
+INCPATHS = -I. -I./include -I./al -I./alc -I./common -I./amigaos4
+
+CFLAGS   = $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS) $(DEFINES)
+PICFLAGS = -fPIC -DPIC
+
+STATIC_LIB := libopenal.a
+SHARED_LIB := libopenal.so
+
+SRCS = al/auxeffectslot.cpp \
+       al/buffer.cpp \
+       al/effect.cpp \
+       al/error.cpp \
+       al/event.cpp \
+       al/extension.cpp \
+       al/filter.cpp \
+       al/listener.cpp \
+       al/source.cpp \
+       al/state.cpp \
+       alc/alc.cpp \
+       alc/alconfig.cpp \
+       alc/alu.cpp \
+       alc/ambdec.cpp \
+       alc/bformatdec.cpp \
+       alc/bs2b.cpp \
+       alc/converter.cpp \
+       alc/helpers.cpp \
+       alc/hrtf.cpp \
+       alc/mastering.cpp \
+       alc/panning.cpp \
+       alc/ringbuffer.cpp \
+       alc/uhjfilter.cpp \
+       alc/uiddefs.cpp \
+       alc/voice.cpp \
+       alc/backends/ahi.cpp \
+       alc/backends/base.cpp \
+       alc/backends/loopback.cpp \
+       alc/backends/null.cpp \
+       alc/backends/wave.cpp \
+       alc/effects/autowah.cpp \
+       alc/effects/chorus.cpp \
+       alc/effects/compressor.cpp \
+       alc/effects/dedicated.cpp \
+       alc/effects/distortion.cpp \
+       alc/effects/echo.cpp \
+       alc/effects/equalizer.cpp \
+       alc/effects/fshifter.cpp \
+       alc/effects/modulator.cpp \
+       alc/effects/null.cpp \
+       alc/effects/pshifter.cpp \
+       alc/effects/reverb.cpp \
+       alc/effects/vmorpher.cpp \
+       alc/filters/biquad.cpp \
+       alc/filters/nfc.cpp \
+       alc/filters/splitter.cpp \
+       alc/mixer/mixer_c.cpp \
+       common/alcomplex.cpp \
+       common/alexcpt.cpp \
+       common/alfstream.cpp \
+       common/almalloc.cpp \
+       common/alstring.cpp \
+       common/dynload.cpp \
+       common/polyphase_resampler.cpp \
+       common/strutils.cpp \
+       common/threads.cpp
+
+OBJS = $(patsubst %,obj/%.o,$(basename $(SRCS)))
+
+OBJS = $(patsubst %,so-obj/%.o,$(basename $(SRCS)))
+
+.PHONY: all
+all: $(STATIC_LIB) examples
+
+$(STATIC_LIB): $(OBJS)
+	$(AR) -crv $@ $^
+	$(RANLIB) $@
+
+$(SHARED_LIB): $(SO_OBJS)
+	$(CC) -shared -Wl,--soname=$@ -o $@.debug $^ -lpthread
+	$(STRIP) -R.comment -o $@ $@.debug
+
+bsinc_inc.h: bsincgen
+	./bsincgen > $@
+
+bsincgen: native-tools/bsincgen.c
+	gcc -O2 -Wall -o $@ $^ -lm
+
+obj/al/%.o: al/%.cpp
+	@mkdir -p obj/al
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/alc/%.o: alc/%.cpp
+	@mkdir -p obj/alc
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/alc/backends/%.o: alc/backends/%.cpp
+	@mkdir -p obj/alc/backends
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/alc/effects/%.o: alc/effects/%.cpp
+	@mkdir -p obj/alc/effects
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/alc/filters/%.o: alc/filters/%.cpp
+	@mkdir -p obj/alc/filters
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/alc/mixer/%.o: alc/mixer/%.cpp
+	@mkdir -p obj/alc/mixer
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/common/%.o: common/%.cpp
+	@mkdir -p obj/common
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/alc/alu.o: bsinc_inc.h
+
+so-obj/al/%.o: al/%.cpp
+	@mkdir -p so-obj/al
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/alc/%.o: alc/%.cpp
+	@mkdir -p so-obj/alc
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/alc/backends/%.o: alc/backends/%.cpp
+	@mkdir -p so-obj/alc/backends
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/alc/effects/%.o: alc/effects/%.cpp
+	@mkdir -p so-obj/alc/effects
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/alc/filters/%.o: alc/filters/%.cpp
+	@mkdir -p so-obj/alc/filters
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/alc/mixer/%.o: alc/mixer/%.cpp
+	@mkdir -p so-obj/alc/mixer
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/common/%.o: common/%.cpp
+	@mkdir -p so-obj/common
+	$(CC) $(CFLAGS) $(PICFLAGS) -c -o $@ $<
+
+so-obj/alc/alu.o: bsinc_inc.h
+
+.PHONY: examples
+examples:
+	$(MAKE) -C examples -f makefile.amigaos4
+
+.PHONY: clean
+clean:
+	$(MAKE) -C examples -f makefile.amigaos4 clean
+	rm -rf $(STATIC_LIB) $(SHARED_LIB) obj so-obj bsinc_inc.h bsincgen
+
+.PHONY: install
+install:
+	cp -r include/* /SDK/local/newlib/include/
+	cp libopenal.a /SDK/local/newlib/lib/
+	cp libopenal.so /SDK/local/newlib/lib/

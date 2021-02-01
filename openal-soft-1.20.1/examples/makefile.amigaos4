@@ -1,0 +1,42 @@
+HOST   = ppc-amigaos
+CC     = $(HOST)-gcc
+STRIP  = $(HOST)-strip
+
+OPTIMIZE = -O2
+DEBUG    = -g
+WARNINGS = -Wall -Wwrite-strings -Werror
+INCPATHS = -I../include -I../common
+
+CFLAGS     = $(OPTIMIZE) $(DEBUG) $(WARNINGS) $(INCPATHS)
+LDFLAGS    = -static -athread=single
+LIBS       = -lpthread -lstdc++ -lpsem
+STRIPFLAGS = -R.comment --strip-unneeded-rel-relocs
+
+SDL_CFLAGS = -I/SDK/local/common/include/SDL
+SDL_LIBS   = -lSDL
+
+.PHONY: all
+all: alloopback altonegen
+
+obj/%.o: %.c
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/common/%.o: common/%.c
+	@mkdir -p obj/common
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/alloopback.o: CFLAGS += $(SDL_CFLAGS)
+
+alloopback: obj/alloopback.o obj/common/alhelpers.o ../libopenal.a
+	$(CC) $(LDFLAGS) -o $@.debug $^ $(SDL_LIBS) $(LIBS)
+	$(STRIP) $(STRIPFLAGS) -o $@ $@.debug
+
+altonegen: obj/altonegen.o obj/common/alhelpers.o ../libopenal.a
+	$(CC) $(LDFLAGS) -o $@.debug $^ $(LIBS)
+	$(STRIP) $(STRIPFLAGS) -o $@ $@.debug
+
+.PHONY: clean
+clean:
+	rm -rf alloopback *.debug obj
+

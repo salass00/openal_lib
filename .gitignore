@@ -2,15 +2,21 @@
 openal-soft-1.18.2/obj
 openal-soft-1.18.2/so-obj
 openal-soft-1.18.2/examples/obj
+openal-soft-1.20.1/obj
+openal-soft-1.20.1/so-obj
+openal-soft-1.20.1/examples/obj
 # Ignore generated library files
 libopenal.a
 libopenal.so
 libopenal.so.debug
 # Ignore generated executables
+bsincgen
 alloopback
 alloopback.debug
 altonegen
 altonegen.debug
+# Ignore generated header files
+bsinc_inc.h
 # Ignore release archives
 *.7z
 *.lha
